@@ -1,0 +1,19 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Homepage</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>
+  <body>
+    <form action="/attemptLogin" method="post">
+        <label for="name">Username</label><br>
+        <input type="text" id="name" name="user" value="{{username}}">
+        <div class="error" style="color:red;">{{logerror}}</div><br>
+        
+        <label for="pass">Password</label><br>
+        <input type="password" id="pass" name="pass" value="{{password}}">
+    <input type="submit" value="Login">
+    </form>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+/* 
+Makes winbox draggable to the edges of the window and fixes potential cutoff
+https://github.com/nextapps-de/winbox/issues/99#issue-1082188919
+*/
+
+html, body {
+    height: 100%;
+}
+
+#mainbody {
+    height:85%;
+    background: lightgray;
+}
