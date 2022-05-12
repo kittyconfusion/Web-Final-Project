@@ -8,6 +8,7 @@ import hashlib
 import hmac
 from cryptography.fernet import Fernet
 import base64
+from datetime import datetime
 
 ###-----How Authentication Works
 # When a user is first created its password is hashed 
@@ -29,11 +30,26 @@ app = fk.Flask(
 #Will auto apply all changes but will not open in an external window
 #app.run(debug=True)
 
+def dict_factory(cursor, row):
+    d = {}
+    for index, col in enumerate(cursor.description):
+        d[col[0]] = row[index]
+    s = cursor
+    return d
 
 database = sqlite3.connect("database.db", check_same_thread = False)
 cursor = database.cursor()
-cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, usertype TEXT, username TEXT, password TEXT)")
-cursor.execute("CREATE TABLE IF NOT EXISTS requests (ownerid INTEGER PRIMARY KEY, location TEXT, description TEXT)")
+#cursor.row_factory = dict_factory
+
+#connectionP = sqlite3.connect("helpposts.db", check_same_thread = False)
+#cursorP = connectionP.cursor()
+#cursorP.execute("CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY, name TEXT, position TEXT, room TEXT, content TEXT, dueDate TEXT)")
+
+cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, usertype TEXT, username TEXT, password TEXT, nickname TEXT)")
+
+cursor.execute("CREATE TABLE IF NOT EXISTS requests (ownerid INTEGER, name TEXT, location TEXT, position TEXT, description TEXT, dueDate TEXT, timemade REAL)")
+
+cursor.execute("CREATE TABLE IF NOT EXISTS signups (requestid INTEGER, signupid INTEGER)")
 
 USERNAME_RE = re.compile(r"^[\w-]{3,20}$")
 #PASSWORD_RE = re.compile(r"^[.]{3,20}$")
@@ -58,29 +74,26 @@ def createCookieStringHash(text,idVal):
     return encrypt(bText,b64Key).decode("utf-8")
     
 #Creates a new request in the database
-def createRequest(idVal,loc,desc):
+def getUserIDFromCookie(cookieText):
+    cookieText = cookieText.split("|")
+    username = cookieText[0]
+    encPass = cookieText[1]
+    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+    if userid := cursor.fetchone():
+        return int(userid[0])
+    else:
+        return False
 
-    sql = ''' INSERT INTO requests(ownerid, location, description) VALUES(?,?,?) '''
+def getUserNicknameFromCookie(cookieText):
+    cursor.execute("SELECT nickname FROM users WHERE username = ?",(cookieText.split("|")[0],))
+    return cursor.fetchone()[0]
     
-    cursor.execute(sql, (idVal,loc,desc))
-    cursor.commit()
-
-#Creates a new user in the database
-def createUser(userType,username,password):
-    idVal = randint(10000000000,100000000000)
-    hashedPassword = hash_str(password,idVal)
-    
-    sql = ''' INSERT INTO users(id, usertype, username, password) VALUES(?,?,?,?) '''
-    
-    cursor.execute(sql, (idVal,userType,username,hashedPassword))
-    database.commit()
-    
-    return username + "|" + createCookieStringHash(hashedPassword,idVal)
+#Hash will be used in the database for passwords
+def hash_str(s,key): 
+  return hmac.new(str(key).encode('utf-8'),str(s).encode('utf-8'),digestmod=hashlib.sha256).hexdigest()
 
 def checkUserLogin(cookieText):
     if userid := getUserIDFromCookie(cookieText):
-        userid = int(userid[0])
-    
         cursor.execute("SELECT password FROM users WHERE id = ?", (userid,))
         passHash = cursor.fetchone()[0]
         cookieHash = str(cookieText.split("|")[1])
@@ -99,20 +112,32 @@ def checkUserLogin(cookieText):
         
     else:
         return False
-    
-def getUserIDFromCookie(cookieText):
-    cookieText = cookieText.split("|")
-    username = cookieText[0]
-    encPass = cookieText[1]
-    cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
-    if userid := cursor.fetchone():
-        return userid
-    else:
-        return False
 
-#Hash will be used in the database for passwords
-def hash_str(s,key): 
-  return hmac.new(str(key).encode('utf-8'),str(s).encode('utf-8'),digestmod=hashlib.sha256).hexdigest()
+def createRequest(idVal,name,loc,desc,due):
+
+    sql = ''' INSERT INTO requests(ownerid, name, position, location, description, dueDate, timemade) VALUES(?,?,?,?,?,?,?) '''
+    
+    current = datetime.now().timestamp()
+
+    cursor.execute("SELECT usertype FROM users WHERE id = ?", (idVal,))
+    position = cursor.fetchone()[0]
+    
+    cursor.execute(sql, (idVal,name,position,loc,desc,due,current))
+    database.commit()
+
+#Creates a new user in the database
+def createUser(userType,username,password):
+    idVal = randint(10**10,10**11)
+    hashedPassword = hash_str(password,idVal)
+    
+    sql = ''' INSERT INTO users(id, usertype, username, password, nickname) VALUES(?,?,?,?,?) '''
+    
+    cursor.execute(sql, (idVal,userType,username,hashedPassword,username))
+    database.commit()
+    
+    return username + "|" + createCookieStringHash(hashedPassword,idVal)
+
+
     
 #Returns a string of the current database entires
 def debugDatabaseStrUsers():
@@ -120,13 +145,20 @@ def debugDatabaseStrUsers():
     users = cursor.fetchall()
     string = ""
     for user in users:
-        string += f"{user[0]}  {user[1]}  {user[2]}  {user[3]} <br>"
+        string += f"{user[0]}  {user[1]}  {user[2]}  {user[3]} {user[4]} <br>"
         
     #logging.info(string)
     return string
+    
+###-----WEBPAGE LOGIC-----###
 
-@app.route('/mainpage')
-def mainpage():
+def getPosts(startPage,numPerPage):
+    p = cursor.execute(f"SELECT * FROM requests ORDER BY timemade DESC LIMIT {numPerPage} OFFSET {startPage * numPerPage}")
+    posts = [x for x in p]
+    return posts
+    
+@app.route('/settingspage',methods = ['POST', 'GET'])
+def settings():
     if "userinfo" not in fk.request.cookies:
         return fk.make_response(fk.redirect(fk.url_for("loginpage"), code=302))
 
@@ -134,12 +166,34 @@ def mainpage():
     
     if not checkUserLogin(cookie):
         return fk.make_response(fk.redirect(fk.url_for("loginpage"), code=302))
+    
+    userid = getUserIDFromCookie(cookie)
+    
+    method = fk.request.method
+    
+    if method == "POST":
+        newnick = fk.request.form["nickname"]
+        cursor.execute("UPDATE users SET nickname = ? WHERE id =?",(newnick,userid))
+        database.commit()
+    
+    nick = getUserNicknameFromCookie(cookie)
+    
+    return fk.render_template('settingspage.html',currentname = nick)
+    
+    
+@app.route('/mainpage')
+def mainpage():
+    if "userinfo" not in fk.request.cookies:
+        return fk.make_response(fk.redirect(fk.url_for("loginpage"), code=302))
 
+    cookie = fk.request.cookies.get("userinfo")
+
+    if not checkUserLogin(cookie):
+        return fk.make_response(fk.redirect(fk.url_for("loginpage"), code=302))
+
+    #return fk.render_template('mainpage.html') 
+    return fk.render_template('mainpage.html', posts=getPosts(0,10),allUser = debugDatabaseStrUsers(),username = cookie.split("|")[0]) 
     
-    
-    return fk.render_template('mainpage.html', allUser = debugDatabaseStrUsers(),username = cookie.split("|")[0]) 
-    
-###-----WEBPAGE LOGIC-----###
 
 @app.route('/')
 @app.route('/attemptLogin',methods = ['POST', 'GET'])
@@ -166,7 +220,7 @@ def loginpage() :
             logging.info("Result " + str(result))
             #If the user exists
             if result:
-                #Valid credentials
+                #Valid credentials. A new cookie is created
                 if hash_str(password,int(result[0])) == result[1]:
                     cText = username + "|" + createCookieStringHash(result[1],result[0])
                     resp = fk.make_response(fk.redirect(fk.url_for("mainpage"), code=302))
@@ -176,19 +230,55 @@ def loginpage() :
                 else:
                     return fk.render_template('login.html', username = username, password = "", logerror = "Please enter valid username and password!")
                     
-            #Create a new user
-            #Probable want to make this its own page
+            #User does not exist
             else:
-                cText = createUser("stu",username,password)
-                resp = fk.make_response(fk.redirect(fk.url_for("mainpage"), code=302))
-                resp.set_cookie("userinfo", cText)
-                return resp
-            
+                return fk.render_template('login.html', username = username, password = "", logerror = "Please enter valid username and password!")
             
         return fk.render_template('login.html', username = username, password = "", logerror = "Please enter valid username and password!")
 
-#@app.route('/createNew', methods)
-def createNewAcc() :
-  pass
+@app.route('/createNew', methods = ['POST', 'GET'])
+def createNew() :
+  method = fk.request.method
+  if method == "GET" :
+    return fk.render_template('createNew.html')
+  else :
+    username=fk.request.form["user"]
+    password=fk.request.form["pass"]
+    password2=fk.request.form["passConf"]
+    role=fk.request.form["roles"] #student, teacher, or admin
+    if (password == password2 and (USERNAME_RE.search(username) and PASSWORD_RE.search(password))):
+      cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
+      if cursor.fetchone() :
+        return fk.render_template('createNew.html', username="", password="", password2="", logerror = "Username already exists!")
+      else :
+        cText = createUser(role,username,password)
+        resp = fk.make_response(fk.redirect(fk.url_for("mainpage"), code=302))
+        resp.set_cookie("userinfo", cText)
+        return resp
+    else:
+      return fk.render_template('createNew.html', username=username, password="", password2="", logerror = "Please enter valid username and matching passwords!")
+
+@app.route('/createPost', methods=['POST', 'GET'])
+def createPost() :
+  method= fk.request.method
+  cookie = fk.request.cookies.get("userinfo")
+    
+  if method == "GET" :
+    nick = getUserNicknameFromCookie(cookie)
+      
+    return fk.render_template('createPost.html',name=nick)
+  else :
+    name = fk.request.form["name"]
+    room = fk.request.form["room"]
+    description = fk.request.form["description"]
+    dueDat = fk.request.form["dueDate"]
+    cookie = fk.request.cookies.get("userinfo")
+      
+    createRequest(getUserIDFromCookie(cookie),name,room,description,dueDat)
+
+    return fk.make_response(fk.redirect(fk.url_for("mainpage"), code=302))
+    #s = cursorP.execute("SELECT * FROM posts")
+    #posts = [x for x in s]
+    #return fk.render_template("mainpage.html", posts=posts)
 
 app.run(host='0.0.0.0', port=8080)

@@ -6,14 +6,24 @@
     <link rel="stylesheet" type="text/css" href="/static/style.css">
   </head>
   <body>
-    <form action="/attemptLogin" method="post">
+    <form action="/createNew" method="post">
         <label for="name">Username</label><br>
-        <input type="text" id="name" name="user" value="{{username}}">
-        <div class="error" style="color:red;">{{logerror}}</div><br>
-        
+        <input type="text" id="name" name="user" value="{{username}}"><br>
+      
         <label for="pass">Password</label><br>
-        <input type="password" id="pass" name="pass" value="{{password}}">
+        <input type="password" id="pass" name="pass" value="{{password}}"> <br>
+        <label for=passConf"> Confirm Password </label><br>
+        <input type="password" id="passConf" name = "passConf" value="{{password2}}"> <br>
+        <div class="error" style="color:red;">{{logerror}}</div><br>
+        <label for="roles">Select your position:</label>
+        <select id="roles" name="roles">
+          <option value="student" selected>Student</option>
+          <option value="teacher">Teacher</option>
+          <option value="admin">Admin</option>
+        </select> <br>
     <input type="submit" value="Login">
     </form>
+    <br> <br> <br>
+    <a href="/attemptLogin"> Return to Login </a>
   </body>
 </html>

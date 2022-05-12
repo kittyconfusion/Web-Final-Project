@@ -1,37 +1,27 @@
-<!DOCTYPE HTML>
-<html>
-    
-  <head>
-    <meta charset="utf-8">
-    <title>Homepage</title>
-    <link rel="stylesheet" type="text/css" href="/static/style.css">
-    <script src="/static/winbox.bundle.js"></script>
-    </head>
-    <body>
-        <div id="mainbody">
-            <h1>Hello, {{username}}</h1>
-        <div>
-        <button id="showUserWinbox"">DEBUG User Database</button>
-            
-    </body>
-    <script>
-        var userDatabase = "{{allUser|safe}}"
-        function userDebugBox(){
-            new WinBox({
-                title: "User Table",
-                class: ["no-min","no-max","no-full"],
-                html: userDatabase,
-                width: 800
-            });
-        }
-        document.getElementById("showUserWinbox").onclick=function(){userDebugBox();};
-    </script>
-</html>
-            <!--
-        var winbox = new WinBox("All Users");
-        winbox.addClass("no-close");
-        winbox.addClass("no-full");
-        winbox.addClass("wb-hide");
-        winbox.body.innerHTML = ;
-        winbox.addClass("hidden");
-            -->
+{%extends "base.html" %}
+
+{%block title%}Overview{% endblock %}
+
+{%block content%}
+  
+<div id="mainbody">
+    <h1>Hello, {{username}}</h1>
+    <p> <a href="/createPost"> Create New Post </a></p>
+</div>
+{% for request in posts %}
+    <br>
+    <div class="request">
+        <span class="lalign">{{request[1]}}</span>
+        <span  class="ralign">{{request[2]}}</span>
+        <br>
+        <span class="lalign">{{request[4]}}</span>
+        <span class="ralign">{{request[5]}}</span>
+        <br><div> Info <button>Signup</button></div>
+    </div>
+{% endfor %}
+
+{% endblock %}
+
+{%block script%}
+
+{% endblock %}

@@ -1,0 +1,25 @@
+{%extends "base.html" %}
+
+{%block title%}Settings{% endblock %}
+
+{%block content%}
+  
+<button id="signout">Signout</button>
+
+<button id="signupmodal">Sign Up Test</button>
+
+<form action="/settingspage" method="post">
+    <label for="nickname">Change Nickname</label><br>
+        <input type="text" id="nickname" name="nickname" value="{{currentname}}">
+    <input type="submit" value="Apply Changes">
+</form>
+
+{% endblock %}
+
+{%block script%}
+document.getElementById("signout").onclick=function(){
+    document.cookie = "userinfo=~|~;";
+    window.location.href='/';
+    }
+
+{% endblock %}

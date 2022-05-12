@@ -5,9 +5,45 @@ https://github.com/nextapps-de/winbox/issues/99#issue-1082188919
 
 html, body {
     height: 100%;
+    /*font-family: FreeMono, monospace;*/
+    font-family: Verdana, sans-serif;
 }
 
 #mainbody {
-    height:85%;
+    height: 5em;
     background: lightgray;
+}
+
+#headercontainer {
+    height: 2em;
+}
+
+.headertab {
+    font-size: 1.1em;
+    top: 0px;
+    height: 2em;
+    width: 25%;
+    float: left;
+    background: linear-gradient(to left,#e66465, #9198e5);
+    display: flex;
+    justify-content: center;
+}
+
+.request {
+    width: 80%;
+    height: 25vh;
+    background: white;
+    background: radial-gradient(circle, rgba(163,132,146,0.55) 0%, rgba(143,165,190,0.5) 100%);
+    margin: auto;
+    border-radius: 15px;
+}
+
+.lalign {
+    padding-left: 5%; 
+    float: left;
+}
+
+.ralign {
+    padding-right: 5%;
+    float: right;
 }

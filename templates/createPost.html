@@ -1,0 +1,26 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Homepage</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+  </head>
+  <body>
+    <form action="/createPost" method="post">
+      <label for="name">Teacher/Admin Name</label><br>
+      <input type="text" id="name" name="name" value="{{name}}"><br>
+
+      <label for="room">Room Number</label><br>
+      <input type="text" id="room" name="room" value="Room "><br>
+
+      <label for="dueDate">Due Date</label><br>
+      <input type="date" id="dueDate" name="dueDate" value=""><br>
+
+      <label for="description">Problem Description</label><br>
+      <textarea id="description" name="description"></textarea><br>
+    <input type="submit" value="Create Post">
+    </form>
+    <br> <br> <br>
+    <a href="/attemptLogin"> Return to Home </a>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE HTML>
+<html>
+    
+<head>
+    <meta charset="utf-8">
+    <title>{% block title %}{% endblock %}</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+    <script src="/static/winbox.bundle.js"></script>
+</head>
+    {% include "headertabs.html" %}
+<body>
+    {% block content %}
+    {% endblock %}
+        
+    
+</body>
+<script>
+// https://stackoverflow.com/questions/41432759/scale-website-to-mobile-devices
+//Does not currently work for some reason
+//var scale = window.outerWidth / 1000;
+
+//$('head').append('<meta name="viewport" content="width=1000, initial-scale=' + scale + ', maximum-scale=' + scale + ', user-scalable=0">');
+
+/*<button id="showUserWinbox"">DEBUG User Database</button>
+var userDatabase = "{{allUser|safe}}";
+function userDebugBox(){
+    new WinBox({
+        title: "User Table",
+        class: ["no-min","no-max","no-full"],
+        html: userDatabase,
+        width: 800
+    });
+}
+document.getElementById("showUserWinbox").onclick=function(){userDebugBox();};
+*/
+{% block script %}
+{% endblock %}
+</script>
+</html>
