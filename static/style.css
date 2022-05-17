@@ -10,8 +10,9 @@ html, body {
 }
 
 #mainbody {
-    height: 5em;
+    
     background: lightgray;
+    border-radius: 2px;
 }
 
 #headercontainer {
@@ -29,21 +30,48 @@ html, body {
     justify-content: center;
 }
 
-.request {
+#request {
     width: 80%;
-    height: 25vh;
     background: white;
     background: radial-gradient(circle, rgba(163,132,146,0.55) 0%, rgba(143,165,190,0.5) 100%);
     margin: auto;
     border-radius: 15px;
 }
 
-.lalign {
-    padding-left: 5%; 
-    float: left;
+.content {
+  padding-top:2%;
 }
 
-.ralign {
-    padding-right: 5%;
-    float: right;
+.teacher {
+    padding-left: 5%; 
+    float: left;
+    font-size: 2vw;
+    font-weight: bold;
+}
+
+.roomNum {
+    padding-left: 1%;
+    padding-top: 5%;
+}
+
+.description {
+  width: 60%;
+  height: 40%; 
+  padding-left: 8%; 
+  float: left;
+  padding-top: 2%;
+  overflow-wrap: break-word;
+  overflow: hidden;
+}
+
+.dueDate {
+  padding-right: 5%;
+  float: right;
+}
+
+.signup {
+  float:right;
+  padding-right: 2%;
+  padding-top: 6%;
+  
 }

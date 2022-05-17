@@ -5,18 +5,47 @@
 {%block content%}
   
 <div id="mainbody">
-    <h1>Hello, {{username}}</h1>
+    <h1>Hello, {{name}}</h1>
     <p> <a href="/createPost"> Create New Post </a></p>
+
+    <h3>Your current signups</h3>
+{% for signup in signups %}
+    <br>
+    <div>
+    <span> {{signup[1]}} {{signup[2]}} {{signup[5]}}</span>
+        <form method="POST">
+            <input name="{{signup[7]}}remove" type="submit" value="Remove" />
+        </form>
+    </div>
+{% endfor %}
 </div>
 {% for request in posts %}
     <br>
-    <div class="request">
-        <span class="lalign">{{request[1]}}</span>
-        <span  class="ralign">{{request[2]}}</span>
+    <div id="request" style="height: 18em;">
+      <div class="content">
+        <span class="teacher">{{request[1]}}</span> <br> <br>
+        <span  class="roomNum">{{request[2]}}</span>
         <br>
-        <span class="lalign">{{request[4]}}</span>
-        <span class="ralign">{{request[5]}}</span>
-        <br><div> Info <button>Signup</button></div>
+        <span class="description">
+          {{request[4]}}
+          <button onclick="
+            len = '{{request[4]}}'.length;
+            len = 20 + len/90;
+            len = len.toString();
+            this.parentElement.parentElement.parentElement.style.height= len+'em';
+            " id="expandButton"> Expand Text </button>
+        </span>
+        
+        <span class="dueDate">Date: {{request[5]}}</span>
+        <br>  
+          <div class="signup">
+          <form method="POST">
+            <input name="{{request[7]}}" type="submit" value="Signup" />
+          </form>
+          </div>
+
+      </div>
+      </div>
     </div>
 {% endfor %}
 

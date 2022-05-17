@@ -30,13 +30,6 @@ app = fk.Flask(
 #Will auto apply all changes but will not open in an external window
 #app.run(debug=True)
 
-def dict_factory(cursor, row):
-    d = {}
-    for index, col in enumerate(cursor.description):
-        d[col[0]] = row[index]
-    s = cursor
-    return d
-
 database = sqlite3.connect("database.db", check_same_thread = False)
 cursor = database.cursor()
 #cursor.row_factory = dict_factory
@@ -44,12 +37,12 @@ cursor = database.cursor()
 #connectionP = sqlite3.connect("helpposts.db", check_same_thread = False)
 #cursorP = connectionP.cursor()
 #cursorP.execute("CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY, name TEXT, position TEXT, room TEXT, content TEXT, dueDate TEXT)")
-
+#cursor.execute("DROP TABLE signups")
 cursor.execute("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, usertype TEXT, username TEXT, password TEXT, nickname TEXT)")
 
-cursor.execute("CREATE TABLE IF NOT EXISTS requests (ownerid INTEGER, name TEXT, location TEXT, position TEXT, description TEXT, dueDate TEXT, timemade REAL)")
+cursor.execute("CREATE TABLE IF NOT EXISTS requests (ownerid INTEGER, name TEXT, location TEXT, position TEXT, description TEXT, dueDate TEXT, timemade REAL, requestid INTEGER)")
 
-cursor.execute("CREATE TABLE IF NOT EXISTS signups (requestid INTEGER, signupid INTEGER)")
+cursor.execute("CREATE TABLE IF NOT EXISTS signups (requestid INTEGER, userid INTEGER)")
 
 USERNAME_RE = re.compile(r"^[\w-]{3,20}$")
 #PASSWORD_RE = re.compile(r"^[.]{3,20}$")
@@ -115,14 +108,15 @@ def checkUserLogin(cookieText):
 
 def createRequest(idVal,name,loc,desc,due):
 
-    sql = ''' INSERT INTO requests(ownerid, name, position, location, description, dueDate, timemade) VALUES(?,?,?,?,?,?,?) '''
+    sql = ''' INSERT INTO requests(ownerid, name, position, location, description, dueDate, timemade, requestid) VALUES(?,?,?,?,?,?,?,?) '''
     
     current = datetime.now().timestamp()
 
     cursor.execute("SELECT usertype FROM users WHERE id = ?", (idVal,))
     position = cursor.fetchone()[0]
+    requestid = randint(10**10,10**11)
     
-    cursor.execute(sql, (idVal,name,position,loc,desc,due,current))
+    cursor.execute(sql, (idVal,name,position,loc,desc,due,current,requestid))
     database.commit()
 
 #Creates a new user in the database
@@ -137,7 +131,14 @@ def createUser(userType,username,password):
     
     return username + "|" + createCookieStringHash(hashedPassword,idVal)
 
-
+def getSignups(cookietext):
+    p = cursor.execute("SELECT requestid FROM signups WHERE userid = ?",(getUserIDFromCookie(cookietext),)).fetchall()
+    posts = []
+    #logging.info(p)
+    for s in range(len(p)):
+        cursor.execute("SELECT * FROM requests WHERE requestid = ?", (p[s][0],))
+        posts.append(cursor.fetchone())
+    return posts
     
 #Returns a string of the current database entires
 def debugDatabaseStrUsers():
@@ -150,12 +151,14 @@ def debugDatabaseStrUsers():
     #logging.info(string)
     return string
     
-###-----WEBPAGE LOGIC-----###
+
 
 def getPosts(startPage,numPerPage):
     p = cursor.execute(f"SELECT * FROM requests ORDER BY timemade DESC LIMIT {numPerPage} OFFSET {startPage * numPerPage}")
     posts = [x for x in p]
     return posts
+
+    ###-----WEBPAGE LOGIC-----###
     
 @app.route('/settingspage',methods = ['POST', 'GET'])
 def settings():
@@ -172,6 +175,7 @@ def settings():
     method = fk.request.method
     
     if method == "POST":
+      
         newnick = fk.request.form["nickname"]
         cursor.execute("UPDATE users SET nickname = ? WHERE id =?",(newnick,userid))
         database.commit()
@@ -181,8 +185,9 @@ def settings():
     return fk.render_template('settingspage.html',currentname = nick)
     
     
-@app.route('/mainpage')
+@app.route('/mainpage',methods = ['POST','GET'])
 def mainpage():
+    method = fk.request.method
     if "userinfo" not in fk.request.cookies:
         return fk.make_response(fk.redirect(fk.url_for("loginpage"), code=302))
 
@@ -191,9 +196,17 @@ def mainpage():
     if not checkUserLogin(cookie):
         return fk.make_response(fk.redirect(fk.url_for("loginpage"), code=302))
 
-    #return fk.render_template('mainpage.html') 
-    return fk.render_template('mainpage.html', posts=getPosts(0,10),allUser = debugDatabaseStrUsers(),username = cookie.split("|")[0]) 
+
+    if method == "POST":
+        attemptsignupid = (list(fk.request.form.keys())[0])
+        if attemptsignupid[-6:] == 'remove':
+            cursor.execute("DELETE FROM signups WHERE requestid = ?",(int(attemptsignupid[:-6]),))
+        else:    
+            cursor.execute("INSERT INTO signups(requestid,userid) VALUES(?,?)", (int(attemptsignupid),getUserIDFromCookie(cookie)))
+        database.commit()
     
+    return fk.render_template('mainpage.html', signups=getSignups(cookie), posts=getPosts(0,10),name = getUserNicknameFromCookie(cookie)) 
+        
 
 @app.route('/')
 @app.route('/attemptLogin',methods = ['POST', 'GET'])
@@ -249,7 +262,7 @@ def createNew() :
     if (password == password2 and (USERNAME_RE.search(username) and PASSWORD_RE.search(password))):
       cursor.execute("SELECT id FROM users WHERE username = ?", (username,))
       if cursor.fetchone() :
-        return fk.render_template('createNew.html', username="", password="", password2="", logerror = "Username already exists!")
+        return fk.render_template('createNew.html', username="", password="", password2="", logerror = "Username or Password already exists!")
       else :
         cText = createUser(role,username,password)
         resp = fk.make_response(fk.redirect(fk.url_for("mainpage"), code=302))
